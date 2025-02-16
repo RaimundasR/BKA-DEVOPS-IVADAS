@@ -3,7 +3,7 @@ FROM node:lts-alpine AS build-stage
 WORKDIR /app
 
 # Copy package.json and package-lock.json explicitly
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Verify if package.json is actually copied
 RUN ls -l /app
