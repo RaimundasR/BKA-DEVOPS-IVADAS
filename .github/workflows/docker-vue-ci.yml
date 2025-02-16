@@ -3,18 +3,16 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
-      - "feature/**"  # Build image on push to feature branches
-  pull_request:
-    types: [opened, reopened, ready_for_review]  # Deploy staging when PR is opened to main
-    branches:
-      - main
-  push:
-    branches:
+      - "feature/**"  # Trigger build for feature branches
       - main  # Deploy production when merged to main
+  pull_request:
+    branches:
+      - main  # Deploy staging when PR is opened to main
+    types: [opened, reopened, ready_for_review]
 
 jobs:
   build-development:
-    runs-on: bka-devops  # Ensures it runs on your self-hosted runner
+    runs-on: bka-devops  # Use self-hosted runner
     timeout-minutes: 5
     steps:
       - name: Checkout Code
@@ -41,7 +39,7 @@ jobs:
         if: always()
 
   deploy-staging:
-    runs-on: bka-devops  # Ensures it runs on your self-hosted runner
+    runs-on: bka-devops  # Use self-hosted runner
     needs: build-development
     timeout-minutes: 5
     if: github.event_name == 'pull_request'  # Deploy to staging when PR is opened
@@ -68,10 +66,10 @@ jobs:
         if: always()
 
   deploy-production:
-    runs-on: bka-devops  # Ensures it runs on your self-hosted runner
+    runs-on: bka-devops  # Use self-hosted runner
     needs: deploy-staging
     timeout-minutes: 5
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Deploy to production after merge
+    if: github.ref == 'refs/heads/main'  # Deploy only after merging PR to main
     steps:
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
