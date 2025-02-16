@@ -3,14 +3,13 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
-      - "feature/**"  # Build image on push to feature branches
+      - "feature/**"
+      - main
   pull_request:
     branches:
-      - main  # Deploy staging when PR is opened to main
+      - main
     types: [opened, reopened, ready_for_review]
-  push:
-    branches:
-      - main  # Deploy production when merged to main
+
 
 jobs:
   build-development:
