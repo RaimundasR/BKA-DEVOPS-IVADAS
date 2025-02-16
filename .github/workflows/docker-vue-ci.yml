@@ -35,13 +35,23 @@ jobs:
           echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_ENV
           echo "DOCKER_TAG set to v$NEXT_VERSION"
 
+      - name: Save Docker Tag for Later Jobs
+        run: echo "${{ env.DOCKER_TAG }}" > docker-tag.txt
+
+      - name: Upload Version File
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-tag
+          path: docker-tag.txt
+          retention-days: 1
+
       - name: Build Docker Image (Development Stage)
         run: docker buildx build --load -t my-vue-app:${{ env.DOCKER_TAG }} .
 
       - name: Save Docker Image as Tar
         run: docker save my-vue-app:${{ env.DOCKER_TAG }} -o my-vue-app-${{ env.DOCKER_TAG }}.tar
 
-      - name: Upload Artifact
+      - name: Upload Docker Image
         uses: actions/upload-artifact@v4
         with:
           name: vue-docker-${{ env.DOCKER_TAG }}
@@ -58,6 +68,14 @@ jobs:
     timeout-minutes: 5
     if: github.event_name == 'pull_request'  # ✅ Runs only on PR events
     steps:
+      - name: Download Docker Tag
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-tag
+
+      - name: Set Docker Tag from File
+        run: echo "DOCKER_TAG=$(cat docker-tag.txt)" >> $GITHUB_ENV
+
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
         with:
@@ -90,6 +108,14 @@ jobs:
     timeout-minutes: 5
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Download Docker Tag
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-tag
+
+      - name: Set Docker Tag from File
+        run: echo "DOCKER_TAG=$(cat docker-tag.txt)" >> $GITHUB_ENV
+
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
         with:
