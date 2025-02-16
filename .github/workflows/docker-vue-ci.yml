@@ -10,11 +10,11 @@ on:
       - main
     types: [opened, reopened, ready_for_review]
 
-
 jobs:
   build-development:
     runs-on: bka-devops
     timeout-minutes: 5
+    if: github.event_name == 'push'  # ✅ Prevents execution on PR events
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
     runs-on: bka-devops
     needs: build-development
     timeout-minutes: 5
-    if: github.event_name == 'pull_request'  # Deploy to staging when PR is opened
+    if: github.event_name == 'pull_request'  # ✅ Runs only on PR events
     steps:
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
@@ -88,7 +88,7 @@ jobs:
     runs-on: bka-devops
     needs: deploy-staging
     timeout-minutes: 5
-    if: github.ref == 'refs/heads/main'  # Deploy only after merging PR to main
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
