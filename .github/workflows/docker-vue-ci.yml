@@ -65,8 +65,8 @@ jobs:
       - name: Retrieve Docker Tag from Previous Run
         run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
 
-      - name: Debug: Print Docker Tag
-        run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
+      - name: Debug Print Docker Tag
+        run: echo "DOCKER_TAG=${{ env.DOCKER_TAG }}"
 
       - name: Download Last Successful Build
         uses: actions/download-artifact@v4
@@ -103,7 +103,7 @@ jobs:
       - name: Retrieve Docker Tag from Previous Run
         run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
 
-      - name: Debug: Print Docker Tag
+      - name: Debug Print Docker Tag
         run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
 
       - name: Download Last Successful Build
