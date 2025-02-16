@@ -3,14 +3,12 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
-      - "feature/**"  # Build image on push to feature branches
+      - "feature/**"
+      - main  # Deploy production when merged to main
   pull_request:
     branches:
       - main  # Deploy staging when PR is opened to main
     types: [opened, reopened, ready_for_review]
-  push:
-    branches:
-      - main  # Deploy production when merged to main
 
 jobs:
   build-development:
@@ -36,12 +34,10 @@ jobs:
           echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_ENV
 
       - name: Build Docker Image (Development Stage)
-        run: |
-          docker build -t my-vue-app:${{ env.DOCKER_TAG }} .
+        run: docker build -t my-vue-app:${{ env.DOCKER_TAG }} .
 
       - name: Save Docker Image as Tar
-        run: |
-          docker save my-vue-app:${{ env.DOCKER_TAG }} -o my-vue-app-${{ env.DOCKER_TAG }}.tar
+        run: docker save my-vue-app:${{ env.DOCKER_TAG }} -o my-vue-app-${{ env.DOCKER_TAG }}.tar
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -66,8 +62,7 @@ jobs:
           name: vue-docker-${{ env.DOCKER_TAG }}
 
       - name: Load Docker Image
-        run: |
-          docker load -i my-vue-app-${{ env.DOCKER_TAG }}.tar
+        run: docker load -i my-vue-app-${{ env.DOCKER_TAG }}.tar
 
       - name: Stop and Remove Old Staging Container
         run: |
@@ -76,8 +71,7 @@ jobs:
           docker rmi my-vue-app:${{ env.DOCKER_TAG }} || true
 
       - name: Run Updated Staging Container
-        run: |
-          docker run -d --name vue-staging -p 8081:80 my-vue-app:${{ env.DOCKER_TAG }}
+        run: docker run -d --name vue-staging -p 8081:80 my-vue-app:${{ env.DOCKER_TAG }}
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
@@ -95,8 +89,7 @@ jobs:
           name: vue-docker-${{ env.DOCKER_TAG }}
 
       - name: Load Docker Image
-        run: |
-          docker load -i my-vue-app-${{ env.DOCKER_TAG }}.tar
+        run: docker load -i my-vue-app-${{ env.DOCKER_TAG }}.tar
 
       - name: Stop and Remove Old Production Container
         run: |
@@ -105,8 +98,7 @@ jobs:
           docker rmi my-vue-app:${{ env.DOCKER_TAG }} || true
 
       - name: Run Updated Production Container
-        run: |
-          docker run -d --name vue-nginx -p 8080:80 my-vue-app:${{ env.DOCKER_TAG }}
+        run: docker run -d --name vue-nginx -p 8080:80 my-vue-app:${{ env.DOCKER_TAG }}
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
