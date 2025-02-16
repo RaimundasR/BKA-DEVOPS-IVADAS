@@ -58,11 +58,15 @@ jobs:
 
   deploy-staging:
     runs-on: bka-devops
+    needs: build-development
     timeout-minutes: 5
     if: github.event_name == 'pull_request'  # ✅ Runs only on PR events
     steps:
       - name: Retrieve Docker Tag from Previous Run
         run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
+
+      - name: Debug: Print Docker Tag
+        run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
 
       - name: Download Last Successful Build
         uses: actions/download-artifact@v4
@@ -98,6 +102,9 @@ jobs:
     steps:
       - name: Retrieve Docker Tag from Previous Run
         run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
+
+      - name: Debug: Print Docker Tag
+        run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
 
       - name: Download Last Successful Build
         uses: actions/download-artifact@v4
