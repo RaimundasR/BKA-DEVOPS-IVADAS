@@ -2,16 +2,11 @@
 FROM node:lts-alpine AS build-stage
 WORKDIR /app
 
-# Copy package.json and package-lock.json explicitly
-COPY package.json ./
-
-# Verify if package.json is actually copied
-RUN ls -l /app
-
-# Install dependencies
+# Copy package.json first to cache dependencies
+COPY package.json package-lock.json ./
 RUN npm install
 
-# Now copy the rest of the application
+# Now copy the rest of the app, including index.html
 COPY . .
 
 # Build the Vue.js app
@@ -20,6 +15,6 @@ RUN npm run build
 # Production stage
 FROM nginx:stable-alpine AS production-stage
 COPY --from=build-stage /app/dist /usr/share/nginx/html
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
-
