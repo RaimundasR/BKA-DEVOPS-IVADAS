@@ -3,17 +3,17 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
-      - "feature/**"  # Trigger on push to feature branches
+      - "feature/**"  # Build image on push to feature branches
   pull_request:
-    types: [opened, reopened, ready_for_review]  # Prevent duplicate runs
+    types: [opened, reopened, ready_for_review]  # Deploy when PR is opened to main
     branches:
-      - main  # Trigger only when merging into main
-  workflow_dispatch:  # Allows manual trigger
+      - main
+  workflow_dispatch:  # Allows manual trigger for staging deployment
 
 jobs:
   build:
-    runs-on: bka-devops  # Self-hosted runner label
-    timeout-minutes: 5  # Set timeout to 5 minutes
+    runs-on: [bka-devops, self-hosted]  # Use self-hosted runner
+    timeout-minutes: 5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -22,12 +22,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker Image
-        run: |
-          docker build -t my-vue-app .
+        run: docker build -t my-vue-app .
 
       - name: Save Docker Image as Tar
-        run: |
-          docker save my-vue-app -o my-vue-app.tar
+        run: docker save my-vue-app -o my-vue-app.tar
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -37,15 +35,14 @@ jobs:
           retention-days: 1
 
       - name: Cleanup Docker Cache
-        run: |
-          docker system prune -af
-        if: always()  # Ensures cleanup runs even if the build fails
+        run: docker system prune -af
+        if: always()
 
   deploy-staging:
-    if: github.ref != 'refs/heads/main'  # Deploy staging only for feature branches
-    runs-on: bka-devops
+    runs-on: [bka-devops, self-hosted]
     needs: build
-    timeout-minutes: 5  # Set timeout to 5 minutes
+    timeout-minutes: 5
+    if: github.event_name == 'workflow_dispatch'  # Manual trigger only
     steps:
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
@@ -53,55 +50,44 @@ jobs:
           name: vue-docker-build
 
       - name: Load Docker Image
-        run: |
-          docker load -i my-vue-app.tar
+        run: docker load -i my-vue-app.tar
 
       - name: Stop and Remove Old Staging Container and Image
         run: |
           docker stop vue-staging || true
           docker rm vue-staging || true
-          docker rmi my-vue-app || true  # Remove previous image
+          docker rmi my-vue-app || true
 
       - name: Run New Staging Container
-        run: |
-          docker run -d --name vue-staging -p 8081:80 my-vue-app
+        run: docker run -d --name vue-staging -p 8081:80 my-vue-app
 
       - name: Cleanup Docker Cache
-        run: |
-          docker system prune -af
+        run: docker system prune -af
         if: always()
 
   deploy-production:
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'  # Deploy only on PR to main
-    runs-on: bka-devops
+    runs-on: [bka-devops, self-hosted]
     needs: build
-    timeout-minutes: 5  # Set timeout to 5 minutes
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'  # Deploy on PR to main
     steps:
-      - name: Wait for Manual Approval
-        uses: hmarr/auto-approve-action@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
         with:
           name: vue-docker-build
 
       - name: Load Docker Image
-        run: |
-          docker load -i my-vue-app.tar
+        run: docker load -i my-vue-app.tar
 
       - name: Stop and Remove Old Production Container and Image
         run: |
           docker stop vue-nginx || true
           docker rm vue-nginx || true
-          docker rmi my-vue-app || true  # Remove previous image
+          docker rmi my-vue-app || true
 
       - name: Run New Production Container
-        run: |
-          docker run -d --name vue-nginx -p 8080:80 my-vue-app
+        run: docker run -d --name vue-nginx -p 8080:80 my-vue-app
 
       - name: Cleanup Docker Cache
-        run: |
-          docker system prune -af
+        run: docker system prune -af
         if: always()
