@@ -1,0 +1,60 @@
+name: Vue.js Docker Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build:
+    runs-on: bka-devops  # Self-hosted runner label
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        run: |
+          docker build -t my-vue-app .
+
+      - name: Save Docker Image as Tar
+        run: |
+          docker save my-vue-app -o my-vue-app.tar
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-docker-build
+          path: my-vue-app.tar
+          retention-days: 1
+
+  deploy:
+    runs-on: bka-devops
+    needs: build
+    steps:
+      - name: Wait for Manual Approval
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Built Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-docker-build
+
+      - name: Load Docker Image
+        run: |
+          docker load -i my-vue-app.tar
+
+      - name: Stop and Remove Old Container
+        run: |
+          docker stop vue-nginx || true
+          docker rm vue-nginx || true
+
+      - name: Run New Container
+        run: |
+          docker run -d --name vue-nginx -p 8080:80 my-vue-app
+
