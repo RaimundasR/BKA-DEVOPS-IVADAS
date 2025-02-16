@@ -3,12 +3,17 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
+      - "feature/**"  # Build image on push to feature branches
+  pull_request:
+    types: [opened, reopened, ready_for_review]  # Deploy staging when PR is opened to main
+    branches:
       - main
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:  # Allows manual trigger for staging deployment
 
 jobs:
-  build:
-    runs-on: bka-devops  # Self-hosted runner label
+  build-development:
+    runs-on: [bka-devops, self-hosted]
+    timeout-minutes: 5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -16,45 +21,71 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
-        run: |
-          docker build -t my-vue-app .
+      - name: Build Docker Image (Development Stage)
+        run: docker build -t my-vue-app:dev .
 
       - name: Save Docker Image as Tar
-        run: |
-          docker save my-vue-app -o my-vue-app.tar
+        run: docker save my-vue-app:dev -o my-vue-app-dev.tar
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vue-docker-build
-          path: my-vue-app.tar
+          name: vue-docker-dev
+          path: my-vue-app-dev.tar
           retention-days: 1
 
-  deploy:
-    runs-on: bka-devops
-    needs: build
-    steps:
-      - name: Wait for Manual Approval
-        uses: hmarr/auto-approve-action@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Cleanup Docker Cache
+        run: docker system prune -af
+        if: always()
 
+  deploy-staging:
+    runs-on: [bka-devops, self-hosted]
+    needs: build-development
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'  # Deploy to staging when PR is opened
+    steps:
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
         with:
-          name: vue-docker-build
+          name: vue-docker-dev
 
       - name: Load Docker Image
-        run: |
-          docker load -i my-vue-app.tar
+        run: docker load -i my-vue-app-dev.tar
 
-      - name: Stop and Remove Old Container
+      - name: Stop and Remove Old Staging Container
+        run: |
+          docker stop vue-staging || true
+          docker rm vue-staging || true
+
+      - name: Run Updated Staging Container
+        run: docker run -d --name vue-staging -p 8081:80 my-vue-app:dev
+
+      - name: Cleanup Docker Cache
+        run: docker system prune -af
+        if: always()
+
+  deploy-production:
+    runs-on: [bka-devops, self-hosted]
+    needs: deploy-staging
+    timeout-minutes: 5
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Deploy to production after merge
+    steps:
+      - name: Download Built Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-docker-dev
+
+      - name: Load Docker Image
+        run: docker load -i my-vue-app-dev.tar
+
+      - name: Stop and Remove Old Production Container
         run: |
           docker stop vue-nginx || true
           docker rm vue-nginx || true
 
-      - name: Run New Container
-        run: |
-          docker run -d --name vue-nginx -p 8080:80 my-vue-app
+      - name: Run Updated Production Container
+        run: docker run -d --name vue-nginx -p 8080:80 my-vue-app:dev
 
+      - name: Cleanup Docker Cache
+        run: docker system prune -af
+        if: always()
