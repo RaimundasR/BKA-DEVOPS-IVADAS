@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     if: github.event_name == 'push'  # ✅ Prevents execution on PR events
     outputs:
-      DOCKER_TAG: ${{ steps.set-tag.outputs.DOCKER_TAG }}  # ✅ Pass tag to next jobs
+      DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}  # ✅ Correct output reference
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Check and Set Docker Tag
-        id: set-tag  # ✅ Define an ID to store outputs
+        id: docker_tag_step  # ✅ Define an ID for reference
         run: |
           VERSION_FILE="/home/tenant/docker_version.txt"
           if [[ -f "$VERSION_FILE" ]]; then
@@ -58,14 +58,18 @@ jobs:
 
   deploy-staging:
     runs-on: bka-devops
-    needs: build-development
     timeout-minutes: 5
     if: github.event_name == 'pull_request'  # ✅ Runs only on PR events
     steps:
-      - name: Retrieve Docker Tag from Previous Run
-        run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
+      - name: Retrieve Last Docker Tag from Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-docker-latest
 
-      - name:  Print Docker Tag
+      - name: Set Docker Tag from File
+        run: echo "DOCKER_TAG=$(ls vue-docker-*)" >> $GITHUB_ENV
+
+      - name: Print Docker Tag
         run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
 
       - name: Download Last Successful Build
@@ -100,8 +104,13 @@ jobs:
     timeout-minutes: 5
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Retrieve Docker Tag from Previous Run
-        run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
+      - name: Retrieve Last Docker Tag from Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-docker-latest
+
+      - name: Set Docker Tag from File
+        run: echo "DOCKER_TAG=$(ls vue-docker-*)" >> $GITHUB_ENV
 
       - name: Print Docker Tag
         run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
