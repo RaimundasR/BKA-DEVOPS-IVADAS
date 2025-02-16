@@ -48,10 +48,11 @@ jobs:
         run: |
           docker load -i my-vue-app.tar
 
-      - name: Stop and Remove Old Staging Container
+      - name: Stop and Remove Old Staging Container and Image
         run: |
           docker stop vue-staging || true
           docker rm vue-staging || true
+          docker rmi my-vue-app || true  # Remove previous image
 
       - name: Run New Staging Container
         run: |
@@ -76,10 +77,11 @@ jobs:
         run: |
           docker load -i my-vue-app.tar
 
-      - name: Stop and Remove Old Production Container
+      - name: Stop and Remove Old Production Container and Image
         run: |
           docker stop vue-nginx || true
           docker rm vue-nginx || true
+          docker rmi my-vue-app || true  # Remove previous image
 
       - name: Run New Production Container
         run: |
