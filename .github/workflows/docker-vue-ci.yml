@@ -40,55 +40,15 @@ jobs:
       - name: Save Docker Image as Tar
         run: docker save my-vue-app:${{ env.DOCKER_TAG }} -o my-vue-app-${{ env.DOCKER_TAG }}.tar
 
-      - name: Upload Artifact
+      - name: Print Artifact Name Before Upload
         run: echo "Uploading artifact: vue-docker-${{ env.DOCKER_TAG }}"
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: vue-docker-${{ env.DOCKER_TAG }}
           path: my-vue-app-${{ env.DOCKER_TAG }}.tar
           retention-days: 1
-
-      - name: Cleanup Docker Cache
-        run: docker system prune -af
-        if: always()
-
-  deploy-staging:
-    runs-on: bka-devops
-    needs: build-development
-    timeout-minutes: 5
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Print Expected Artifact Name
-        run: echo "Expecting to download artifact: vue-docker-${{ env.DOCKER_TAG }}"
-
-      - name: List Artifacts (Debugging)
-        run: |
-          echo "Listing available artifacts:"
-          gh api repos/${{ github.repository }}/actions/artifacts --paginate
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download Built Docker Image
-        uses: actions/download-artifact@v4
-        with:
-          name: vue-docker-${{ env.DOCKER_TAG }}
-
-      - name: Load Docker Image
-        run: docker load -i my-vue-app-${{ env.DOCKER_TAG }}.tar
-
-      - name: Stop and Remove Old Staging Container
-        run: |
-          docker stop vue-staging || true
-          docker rm vue-staging || true
-
-      - name: Remove Old Staging Image
-        run: |
-          if docker images -q my-vue-app:${{ env.PREV_DOCKER_TAG }}; then
-            docker rmi my-vue-app:${{ env.PREV_DOCKER_TAG }} || true
-          fi
-
-      - name: Run Updated Staging Container
-        run: docker run -d --name vue-staging -p 8081:80 my-vue-app:${{ env.DOCKER_TAG }}
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
