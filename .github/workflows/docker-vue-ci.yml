@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     if: github.event_name == 'push'  # ✅ Prevents execution on PR events
     outputs:
-      DOCKER_TAG: ${{ steps.set-tag.outputs.DOCKER_TAG }}  # ✅ Pass tag to next jobs
+      DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}  # ✅ Correct output reference
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Check and Set Docker Tag
-        id: set-tag  # ✅ Define an ID to store outputs
+        id: docker_tag_step  # ✅ Define an ID for reference
         run: |
           VERSION_FILE="/home/tenant/docker_version.txt"
           if [[ -f "$VERSION_FILE" ]]; then
