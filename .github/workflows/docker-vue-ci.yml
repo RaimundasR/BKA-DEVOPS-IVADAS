@@ -3,15 +3,17 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
-      - "feature/**"  # Trigger on any feature branch push
+      - "feature/**"  # Trigger on push to feature branches
   pull_request:
+    types: [opened, reopened, ready_for_review]  # Prevent duplicate runs
     branches:
-      - main  # Trigger deployment approval when merging into main
+      - main  # Trigger only when merging into main
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
   build:
     runs-on: bka-devops  # Self-hosted runner label
+    timeout-minutes: 5  # Set timeout to 5 minutes
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -38,6 +40,7 @@ jobs:
     if: github.ref != 'refs/heads/main'  # Deploy staging only for feature branches
     runs-on: bka-devops
     needs: build
+    timeout-minutes: 5  # Set timeout to 5 minutes
     steps:
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
@@ -62,6 +65,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'  # Deploy only on PR to main
     runs-on: bka-devops
     needs: build
+    timeout-minutes: 5  # Set timeout to 5 minutes
     steps:
       - name: Wait for Manual Approval
         uses: hmarr/auto-approve-action@v3
