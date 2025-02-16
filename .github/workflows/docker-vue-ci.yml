@@ -36,6 +36,11 @@ jobs:
           path: my-vue-app.tar
           retention-days: 1
 
+      - name: Cleanup Docker Cache
+        run: |
+          docker system prune -af
+        if: always()  # Ensures cleanup runs even if the build fails
+
   deploy-staging:
     if: github.ref != 'refs/heads/main'  # Deploy staging only for feature branches
     runs-on: bka-devops
@@ -60,6 +65,11 @@ jobs:
       - name: Run New Staging Container
         run: |
           docker run -d --name vue-staging -p 8081:80 my-vue-app
+
+      - name: Cleanup Docker Cache
+        run: |
+          docker system prune -af
+        if: always()
 
   deploy-production:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'  # Deploy only on PR to main
@@ -90,3 +100,8 @@ jobs:
       - name: Run New Production Container
         run: |
           docker run -d --name vue-nginx -p 8080:80 my-vue-app
+
+      - name: Cleanup Docker Cache
+        run: |
+          docker system prune -af
+        if: always()
