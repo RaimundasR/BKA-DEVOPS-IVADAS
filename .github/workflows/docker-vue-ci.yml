@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - "feature/**"
-      - main  # Deploy production when merged to main
+      - main
   pull_request:
     branches:
-      - main  # Deploy staging when PR is opened to main
+      - main
     types: [opened, reopened, ready_for_review]
 
 jobs:
@@ -56,6 +56,15 @@ jobs:
     timeout-minutes: 5
     if: github.event_name == 'pull_request'
     steps:
+      - name: Get Previous Version
+        run: |
+          VERSION_FILE="/home/tenant/docker_version.txt"
+          if [ -f "$VERSION_FILE" ]; then
+            LAST_VERSION=$(cat "$VERSION_FILE" | sed 's/v//')
+            PREV_VERSION=$((LAST_VERSION - 1))
+            echo "PREV_DOCKER_TAG=v$PREV_VERSION" >> $GITHUB_ENV
+          fi
+
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
         with:
@@ -68,7 +77,12 @@ jobs:
         run: |
           docker stop vue-staging || true
           docker rm vue-staging || true
-          docker rmi my-vue-app:${{ env.DOCKER_TAG }} || true
+
+      - name: Remove Old Staging Image
+        run: |
+          if docker images -q my-vue-app:${{ env.PREV_DOCKER_TAG }}; then
+            docker rmi my-vue-app:${{ env.PREV_DOCKER_TAG }} || true
+          fi
 
       - name: Run Updated Staging Container
         run: docker run -d --name vue-staging -p 8081:80 my-vue-app:${{ env.DOCKER_TAG }}
@@ -83,6 +97,15 @@ jobs:
     timeout-minutes: 5
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Get Previous Version
+        run: |
+          VERSION_FILE="/home/tenant/docker_version.txt"
+          if [ -f "$VERSION_FILE" ]; then
+            LAST_VERSION=$(cat "$VERSION_FILE" | sed 's/v//')
+            PREV_VERSION=$((LAST_VERSION - 1))
+            echo "PREV_DOCKER_TAG=v$PREV_VERSION" >> $GITHUB_ENV
+          fi
+
       - name: Download Built Docker Image
         uses: actions/download-artifact@v4
         with:
@@ -95,7 +118,12 @@ jobs:
         run: |
           docker stop vue-nginx || true
           docker rm vue-nginx || true
-          docker rmi my-vue-app:${{ env.DOCKER_TAG }} || true
+
+      - name: Remove Old Production Image
+        run: |
+          if docker images -q my-vue-app:${{ env.PREV_DOCKER_TAG }}; then
+            docker rmi my-vue-app:${{ env.PREV_DOCKER_TAG }} || true
+          fi
 
       - name: Run Updated Production Container
         run: docker run -d --name vue-nginx -p 8080:80 my-vue-app:${{ env.DOCKER_TAG }}
