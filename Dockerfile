@@ -3,7 +3,7 @@ FROM node:lts-alpine AS build-stage
 WORKDIR /app
 
 # Copy package.json first to cache dependencies
-COPY package.json package-lock.json ./
+COPY package.json  ./
 RUN npm install
 
 # Now copy the rest of the app, including index.html
