@@ -3,7 +3,10 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
-      - main
+      - "feature/**"  # Trigger on any feature branch push
+  pull_request:
+    branches:
+      - main  # Trigger deployment approval when merging into main
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
@@ -31,7 +34,31 @@ jobs:
           path: my-vue-app.tar
           retention-days: 1
 
-  deploy:
+  deploy-staging:
+    if: github.ref != 'refs/heads/main'  # Deploy staging only for feature branches
+    runs-on: bka-devops
+    needs: build
+    steps:
+      - name: Download Built Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-docker-build
+
+      - name: Load Docker Image
+        run: |
+          docker load -i my-vue-app.tar
+
+      - name: Stop and Remove Old Staging Container
+        run: |
+          docker stop vue-staging || true
+          docker rm vue-staging || true
+
+      - name: Run New Staging Container
+        run: |
+          docker run -d --name vue-staging -p 8081:80 my-vue-app
+
+  deploy-production:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'  # Deploy only on PR to main
     runs-on: bka-devops
     needs: build
     steps:
@@ -49,12 +76,11 @@ jobs:
         run: |
           docker load -i my-vue-app.tar
 
-      - name: Stop and Remove Old Container
+      - name: Stop and Remove Old Production Container
         run: |
           docker stop vue-nginx || true
           docker rm vue-nginx || true
 
-      - name: Run New Container
+      - name: Run New Production Container
         run: |
           docker run -d --name vue-nginx -p 8080:80 my-vue-app
-
