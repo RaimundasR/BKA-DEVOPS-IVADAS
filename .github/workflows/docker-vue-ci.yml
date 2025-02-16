@@ -24,7 +24,7 @@ jobs:
       - name: Check and Set Docker Tag
         run: |
           VERSION_FILE="/home/tenant/docker_version.txt"
-          if [ -f "$VERSION_FILE" ]; then
+          if [[ -f "$VERSION_FILE" ]]; then
             LAST_VERSION=$(cat "$VERSION_FILE" | sed 's/v//')
             NEXT_VERSION=$((LAST_VERSION + 1))
           else
@@ -40,8 +40,18 @@ jobs:
       - name: Save Docker Image as Tar
         run: docker save my-vue-app:${{ env.DOCKER_TAG }} -o my-vue-app-${{ env.DOCKER_TAG }}.tar
 
+      - name: Ensure Docker Tag is Set
+        run: |
+          if [ -z "${{ env.DOCKER_TAG }}" ]; then
+            echo "DOCKER_TAG is not set! Exiting..."
+            exit 1
+          else
+            echo "DOCKER_TAG is set to: ${{ env.DOCKER_TAG }}"
+          fi
+
       - name: Print Artifact Name Before Upload
-        run: echo "Uploading artifact: vue-docker-${{ env.DOCKER_TAG }}"
+        run: echo "vue-docker-${{ env.DOCKER_TAG }}"
+
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
