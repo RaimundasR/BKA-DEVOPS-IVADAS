@@ -8,11 +8,13 @@ on:
     types: [opened, reopened, ready_for_review]  # Deploy staging when PR is opened to main
     branches:
       - main
-  workflow_dispatch:  # Allows manual trigger for staging deployment
+  push:
+    branches:
+      - main  # Deploy production when merged to main
 
 jobs:
   build-development:
-    runs-on: [bka-devops, self-hosted]
+    runs-on: bka-devops  # Ensures it runs on your self-hosted runner
     timeout-minutes: 5
     steps:
       - name: Checkout Code
@@ -39,7 +41,7 @@ jobs:
         if: always()
 
   deploy-staging:
-    runs-on: [bka-devops, self-hosted]
+    runs-on: bka-devops  # Ensures it runs on your self-hosted runner
     needs: build-development
     timeout-minutes: 5
     if: github.event_name == 'pull_request'  # Deploy to staging when PR is opened
@@ -56,6 +58,7 @@ jobs:
         run: |
           docker stop vue-staging || true
           docker rm vue-staging || true
+          docker rmi my-vue-app:dev || true
 
       - name: Run Updated Staging Container
         run: docker run -d --name vue-staging -p 8081:80 my-vue-app:dev
@@ -65,7 +68,7 @@ jobs:
         if: always()
 
   deploy-production:
-    runs-on: [bka-devops, self-hosted]
+    runs-on: bka-devops  # Ensures it runs on your self-hosted runner
     needs: deploy-staging
     timeout-minutes: 5
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Deploy to production after merge
@@ -82,6 +85,7 @@ jobs:
         run: |
           docker stop vue-nginx || true
           docker rm vue-nginx || true
+          docker rmi my-vue-app:dev || true
 
       - name: Run Updated Production Container
         run: docker run -d --name vue-nginx -p 8080:80 my-vue-app:dev
