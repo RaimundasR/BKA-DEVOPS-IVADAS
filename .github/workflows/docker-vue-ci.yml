@@ -64,7 +64,6 @@ jobs:
 
   deploy-staging:
     runs-on: bka-devops
-    needs: build-development
     timeout-minutes: 5
     if: github.event_name == 'pull_request'  # ✅ Runs only on PR events
     steps:
@@ -76,7 +75,7 @@ jobs:
       - name: Set Docker Tag from File
         run: echo "DOCKER_TAG=$(cat docker-tag.txt)" >> $GITHUB_ENV
 
-      - name: Download Built Docker Image
+      - name: Download Last Successful Build
         uses: actions/download-artifact@v4
         with:
           name: vue-docker-${{ env.DOCKER_TAG }}
@@ -116,7 +115,7 @@ jobs:
       - name: Set Docker Tag from File
         run: echo "DOCKER_TAG=$(cat docker-tag.txt)" >> $GITHUB_ENV
 
-      - name: Download Built Docker Image
+      - name: Download Last Successful Build
         uses: actions/download-artifact@v4
         with:
           name: vue-docker-${{ env.DOCKER_TAG }}
