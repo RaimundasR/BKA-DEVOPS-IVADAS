@@ -14,7 +14,7 @@ jobs:
   build-development:
     runs-on: bka-devops
     timeout-minutes: 5
-    environment: dockerhub registry
+    environment: dockerhub-registry
     if: github.event_name == 'push'
     outputs:
       DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}
@@ -75,7 +75,7 @@ jobs:
     runs-on: bka-devops
     needs: build-development
     timeout-minutes: 5
-    environment: dockerhub registry  # ✅ Grants access to secrets
+    environment: dockerhub-registry  # ✅ Grants access to secrets
     if: github.event_name == 'pull_request'
     steps:
       - name: Retrieve Docker Tag from Previous Run
@@ -103,7 +103,7 @@ jobs:
     runs-on: bka-devops
     needs: deploy-staging
     timeout-minutes: 5
-    environment: dockerhub registry  # ✅ Grants access to secrets
+    environment: dockerhub-registry  # ✅ Grants access to secrets
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Retrieve Docker Tag from Previous Run
