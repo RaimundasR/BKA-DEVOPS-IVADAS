@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     if: github.event_name == 'push'  # ✅ Prevents execution on PR events
     outputs:
-      DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}  # ✅ Correct output reference
+      DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}  # ✅ Pass tag to next jobs
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
       - name: Upload Docker Image
         uses: actions/upload-artifact@v4
         with:
-          name: vue-docker-${{ env.DOCKER_TAG }}
+          name: vue-docker-${{ env.DOCKER_TAG }}  # ✅ Ensure the correct artifact name
           path: my-vue-app-${{ env.DOCKER_TAG }}.tar
           retention-days: 1
 
@@ -58,16 +58,12 @@ jobs:
 
   deploy-staging:
     runs-on: bka-devops
+    needs: build-development
     timeout-minutes: 5
     if: github.event_name == 'pull_request'  # ✅ Runs only on PR events
     steps:
-      - name: Retrieve Last Docker Tag from Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: vue-docker-latest
-
-      - name: Set Docker Tag from File
-        run: echo "DOCKER_TAG=$(ls vue-docker-*)" >> $GITHUB_ENV
+      - name: Retrieve Docker Tag from Previous Run
+        run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
 
       - name: Print Docker Tag
         run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
@@ -75,7 +71,7 @@ jobs:
       - name: Download Last Successful Build
         uses: actions/download-artifact@v4
         with:
-          name: vue-docker-${{ env.DOCKER_TAG }}
+          name: vue-docker-${{ env.DOCKER_TAG }}  # ✅ Correct artifact name
 
       - name: Load Docker Image
         run: docker load -i my-vue-app-${{ env.DOCKER_TAG }}.tar
@@ -104,13 +100,8 @@ jobs:
     timeout-minutes: 5
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Retrieve Last Docker Tag from Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: vue-docker-latest
-
-      - name: Set Docker Tag from File
-        run: echo "DOCKER_TAG=$(ls vue-docker-*)" >> $GITHUB_ENV
+      - name: Retrieve Docker Tag from Previous Run
+        run: echo "DOCKER_TAG=${{ needs.build-development.outputs.DOCKER_TAG }}" >> $GITHUB_ENV
 
       - name: Print Docker Tag
         run: echo "Using DOCKER_TAG=${{ env.DOCKER_TAG }}"
@@ -118,7 +109,7 @@ jobs:
       - name: Download Last Successful Build
         uses: actions/download-artifact@v4
         with:
-          name: vue-docker-${{ env.DOCKER_TAG }}
+          name: vue-docker-${{ env.DOCKER_TAG }}  # ✅ Correct artifact name
 
       - name: Load Docker Image
         run: docker load -i my-vue-app-${{ env.DOCKER_TAG }}.tar
