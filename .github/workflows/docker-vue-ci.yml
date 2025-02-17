@@ -26,7 +26,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Define Docker Image Name
-        run: echo "IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/my-vue-app" >> $GITHUB_ENV
+        run: |
+          if [[ -z "${{ secrets.DOCKER_USERNAME }}" ]]; then
+            echo "❌ ERROR: DOCKER_USERNAME is empty!" >&2
+            exit 1
+          fi
+          echo "IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/my-vue-app" >> $GITHUB_ENV
+          echo "✅ IMAGE_NAME set to: ${{ secrets.DOCKER_USERNAME }}/my-vue-app"
 
       - name: Check and Set Docker Tag
         id: docker_tag_step
@@ -42,6 +48,11 @@ jobs:
           echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_ENV
           echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_OUTPUT
           echo "DOCKER_TAG set to v$NEXT_VERSION"
+
+      - name: Debug Secrets
+        run: |
+          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}"
+          echo "DOCKER_PASSWORD length=$(echo -n "${{ secrets.DOCKER_PASSWORD }}" | wc -c)"
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
