@@ -39,8 +39,14 @@ jobs:
           echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_OUTPUT  # ✅ Store for next jobs
           echo "DOCKER_TAG set to v$NEXT_VERSION"
 
+      - name: Debug Secrets
+        run: |
+          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}"
+          echo "DOCKER_PASSWORD length=$(echo -n "${{ secrets.DOCKER_PASSWORD }}" | wc -c)"
+
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
 
       - name: Build and Push Docker Image to Docker Hub
         run: |
