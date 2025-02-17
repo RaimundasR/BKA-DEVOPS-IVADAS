@@ -32,7 +32,11 @@ jobs:
             exit 1
           fi
           IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/my-vue-app"
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          {
+            echo "IMAGE_NAME<<EOF"
+            echo "$IMAGE_NAME"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
           echo "✅ IMAGE_NAME set to: $IMAGE_NAME"
 
       - name: Check and Set Docker Tag
@@ -46,8 +50,11 @@ jobs:
             NEXT_VERSION=1
           fi
           echo "v$NEXT_VERSION" > "$VERSION_FILE"
-          echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_ENV
-          echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_OUTPUT
+          {
+            echo "DOCKER_TAG<<EOF"
+            echo "v$NEXT_VERSION"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
           echo "DOCKER_TAG set to v$NEXT_VERSION"
 
       - name: Debug Secrets
@@ -65,7 +72,6 @@ jobs:
       - name: Cleanup Docker Cache
         run: docker system prune -af
         if: always()
-
 
   deploy-staging:
     runs-on: bka-devops
