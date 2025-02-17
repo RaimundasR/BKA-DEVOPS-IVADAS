@@ -18,7 +18,7 @@ jobs:
     if: github.event_name == 'push'
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}  # ✅ Ensure DOCKER_USERNAME is globally available
-      DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}  # ✅ Ensure DOCKER_PASSWORD is globally available
+      DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}  # ✅ Ensure DOCKER_PASSWORD is globally available
     outputs:
       DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}
     steps:
