@@ -1,5 +1,8 @@
-This workflow ensures: ✅ Push to feature/** → Runs a single build as development stage (no deployment).
+Event	Expected Pipeline Behavior
 
-✅ Opening a PR to main → Uses the built image to deploy to staging (8081).
-✅ Merging PR to main → Uses the same image to deploy to production (8080).
-✅ Before starting a new container, the previous one is stopped and removed.
+
+- Push to feature/**	✅ Builds and pushes image to Docker Hub (my-vue-app:vX)
+- Open PR to main	✅ Deploys the latest image to staging (vue-staging, port 8081)
+- Merge PR into main	✅ Deploys the latest image to production (vue-nginx, port 8080)
+
+> Vue.js app should deploy correctly to staging and production based on PRs and merges! 🚀
