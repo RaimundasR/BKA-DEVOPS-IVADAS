@@ -1,6 +1,5 @@
-This workflow ensures:
+This workflow ensures: ✅ Push to feature/** → Runs a single build as development stage (no deployment).
 
-- Push to feature/** → Triggers Docker build as development-stage (no deployment).
-- Opening a PR to main → Deploys the same image from feature/** to staging (8081).
-- Merging PR to main → Deploys the same image to production (8080).
-- Always stops and removes the old container before starting a new one.
+✅ Opening a PR to main → Uses the built image to deploy to staging (8081).
+✅ Merging PR to main → Uses the same image to deploy to production (8080).
+✅ Before starting a new container, the previous one is stopped and removed.

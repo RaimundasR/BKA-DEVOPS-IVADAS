@@ -3,54 +3,101 @@ name: Vue.js Docker Build and Deploy
 on:
   push:
     branches:
-      - "feature/**"  # Build image on push to feature branches
+      - "feature/**"
+      - main
   pull_request:
-    types: [opened, reopened, ready_for_review]  # Deploy staging when PR is opened to main
     branches:
       - main
-  workflow_dispatch:  # Allows manual trigger for staging deployment
+    types: [opened, reopened, ready_for_review]
 
 jobs:
   build-development:
-    runs-on: [bka-devops, self-hosted]
+    runs-on: bka-devops
     timeout-minutes: 5
+    environment: dockerhub-registry  # ✅ Updated environment reference
+    if: github.event_name == 'push'
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}  # ✅ Ensure DOCKER_USERNAME is globally available
+      DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}  # ✅ Ensure DOCKER_PASSWORD is globally available
+    outputs:
+      DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Debug All Environment Variables
+        run: printenv | sort  # ✅ Check if DOCKER_USERNAME is missing
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Debug Secrets Before Use
+        run: |
+          echo "✅ Checking if DOCKER_USERNAME is set..."
+          if [ -z "$DOCKER_USERNAME" ]; then
+            echo "❌ ERROR: DOCKER_USERNAME is empty! Exiting..." >&2
+            exit 1
+          fi
+          echo "✅ DOCKER_USERNAME=$DOCKER_USERNAME"
+          echo "DOCKER_PASSWORD length=$(echo -n "$DOCKER_PASSWORD" | wc -c)"
 
-      - name: Build Docker Image (Development Stage)
-        run: docker build -t my-vue-app:dev .
+      - name: Define Docker Image Name
+        run: |
+          IMAGE_NAME="$DOCKER_USERNAME/my-vue-app"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "✅ IMAGE_NAME set to: $IMAGE_NAME"
 
-      - name: Save Docker Image as Tar
-        run: docker save my-vue-app:dev -o my-vue-app-dev.tar
+      - name: Check and Set Docker Tag
+        id: docker_tag_step
+        run: |
+          VERSION_FILE="/home/tenant/docker_version.txt"
+          if [[ -f "$VERSION_FILE" ]]; then
+            LAST_VERSION=$(cat "$VERSION_FILE" | sed 's/v//')
+            NEXT_VERSION=$((LAST_VERSION + 1))
+          else
+            NEXT_VERSION=1
+          fi
+          echo "v$NEXT_VERSION" > "$VERSION_FILE"
+          echo "DOCKER_TAG=v$NEXT_VERSION" >> "$GITHUB_ENV"
+          echo "✅ DOCKER_TAG set to: v$NEXT_VERSION"
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          name: vue-docker-dev
-          path: my-vue-app-dev.tar
-          retention-days: 1
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and Push Docker Image to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }},${{ env.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:latest
+          cache-to: type=inline
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
         if: always()
 
-  deploy-staging:
-    runs-on: [bka-devops, self-hosted]
-    needs: build-development
-    timeout-minutes: 5
-    if: github.event_name == 'pull_request'  # Deploy to staging when PR is opened
-    steps:
-      - name: Download Built Docker Image
-        uses: actions/download-artifact@v4
-        with:
-          name: vue-docker-dev
 
-      - name: Load Docker Image
-        run: docker load -i my-vue-app-dev.tar
+  deploy-staging:
+    runs-on: bka-devops
+    timeout-minutes: 5
+    environment: dockerhub-registry  # ✅ Grants access to secrets
+    if: github.event_name == 'pull_request'  # ✅ Runs only when a PR is opened
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Get Latest Docker Tag from Docker Hub
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags" | jq -r '.results[0].name')
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+          echo "✅ Using latest Docker tag: $DOCKER_TAG"
+
+      - name: Pull the Latest Image from Docker Hub
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          docker pull "$IMAGE_NAME:$DOCKER_TAG"
 
       - name: Stop and Remove Old Staging Container
         run: |
@@ -58,25 +105,38 @@ jobs:
           docker rm vue-staging || true
 
       - name: Run Updated Staging Container
-        run: docker run -d --name vue-staging -p 8081:80 my-vue-app:dev
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          docker run -d --name vue-staging -p 8081:80 "$IMAGE_NAME:$DOCKER_TAG"
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
         if: always()
 
-  deploy-production:
-    runs-on: [bka-devops, self-hosted]
-    needs: deploy-staging
-    timeout-minutes: 5
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Deploy to production after merge
-    steps:
-      - name: Download Built Docker Image
-        uses: actions/download-artifact@v4
-        with:
-          name: vue-docker-dev
 
-      - name: Load Docker Image
-        run: docker load -i my-vue-app-dev.tar
+  deploy-production:
+    runs-on: bka-devops
+    timeout-minutes: 5
+    environment: dockerhub-registry  # ✅ Grants access to secrets
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # ✅ Runs only when PR is merged to main
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Get Latest Docker Tag from Docker Hub
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags" | jq -r '.results[0].name')
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+          echo "✅ Using latest Docker tag: $DOCKER_TAG"
+
+      - name: Pull the Latest Image from Docker Hub
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          docker pull "$IMAGE_NAME:$DOCKER_TAG"
 
       - name: Stop and Remove Old Production Container
         run: |
@@ -84,7 +144,9 @@ jobs:
           docker rm vue-nginx || true
 
       - name: Run Updated Production Container
-        run: docker run -d --name vue-nginx -p 8080:80 my-vue-app:dev
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          docker run -d --name vue-nginx -p 8080:80 "$IMAGE_NAME:$DOCKER_TAG"
 
       - name: Cleanup Docker Cache
         run: docker system prune -af

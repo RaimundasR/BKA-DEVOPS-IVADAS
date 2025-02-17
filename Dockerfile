@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json  ./
 RUN npm install
 
-# Now copy the rest of the app, including index.html
+# Now copy the rest of the app, including index.html and assets
 COPY . .
 
 # Build the Vue.js app
@@ -14,7 +14,12 @@ RUN npm run build
 
 # Production stage
 FROM nginx:stable-alpine AS production-stage
+
+# Copy built app to Nginx
 COPY --from=build-stage /app/dist /usr/share/nginx/html
+
+# Copy giphy.gif to the Nginx HTML directory
+COPY giphy.gif /usr/share/nginx/html/
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
