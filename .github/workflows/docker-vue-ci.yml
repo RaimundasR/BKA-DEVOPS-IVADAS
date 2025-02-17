@@ -25,6 +25,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Define Docker Image Name
+        run: echo "IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/my-vue-app" >> $GITHUB_ENV
+
       - name: Check and Set Docker Tag
         id: docker_tag_step
         run: |
@@ -40,17 +43,11 @@ jobs:
           echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_OUTPUT
           echo "DOCKER_TAG set to v$NEXT_VERSION"
 
-      - name: Debug Secrets
-        run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}"
-          echo "DOCKER_PASSWORD length=$(echo -n "${{ secrets.DOCKER_PASSWORD }}" | wc -c)"
-
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build and Push Docker Image to Docker Hub
         run: |
-          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/my-vue-app
           docker buildx build --push --tag $IMAGE_NAME:${{ env.DOCKER_TAG }} --tag $IMAGE_NAME:latest .
 
       - name: Cleanup Docker Cache
@@ -71,9 +68,7 @@ jobs:
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Pull the Latest Image from Docker Hub
-        run: |
-          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/my-vue-app
-          docker pull $IMAGE_NAME:${{ env.DOCKER_TAG }}
+        run: docker pull $IMAGE_NAME:${{ env.DOCKER_TAG }}
 
       - name: Stop and Remove Old Staging Container
         run: |
@@ -81,7 +76,7 @@ jobs:
           docker rm vue-staging || true
 
       - name: Run Updated Staging Container
-        run: docker run -d --name vue-staging -p 8081:80 ${{ secrets.DOCKER_USERNAME }}/my-vue-app:${{ env.DOCKER_TAG }}
+        run: docker run -d --name vue-staging -p 8081:80 $IMAGE_NAME:${{ env.DOCKER_TAG }}
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
@@ -101,9 +96,7 @@ jobs:
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Pull the Latest Image from Docker Hub
-        run: |
-          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/my-vue-app
-          docker pull $IMAGE_NAME:${{ env.DOCKER_TAG }}
+        run: docker pull $IMAGE_NAME:${{ env.DOCKER_TAG }}
 
       - name: Stop and Remove Old Production Container
         run: |
@@ -111,7 +104,7 @@ jobs:
           docker rm vue-nginx || true
 
       - name: Run Updated Production Container
-        run: docker run -d --name vue-nginx -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/my-vue-app:${{ env.DOCKER_TAG }}
+        run: docker run -d --name vue-nginx -p 8080:80 $IMAGE_NAME:${{ env.DOCKER_TAG }}
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
