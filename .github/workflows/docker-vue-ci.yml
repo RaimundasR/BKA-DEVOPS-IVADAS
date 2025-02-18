@@ -63,9 +63,8 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }},${{ env.IMAGE_NAME }}:latest
-          cache-from: type=local
-          cache-to: type=local
-          no-cache: true  # ✅ Ensures Docker rebuilds everything
+          no-cache: true  # ✅ Forces a fresh build
+
 
       - name: Verify Pushed Image
         run: |
