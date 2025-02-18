@@ -64,11 +64,8 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
-            ${{ env.IMAGE_NAME }}:latest
-          cache-to: type=inline
-
+          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }},${{ env.IMAGE_NAME }}:latest
+          no-cache: true  # ✅ Forces a fresh build
 
   deploy-development:
     runs-on: bka-devops
