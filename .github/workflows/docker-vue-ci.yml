@@ -15,7 +15,7 @@ jobs:
     runs-on: bka-devops
     timeout-minutes: 5
     environment: dockerhub-registry  # ✅ Updated environment reference
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'  # 
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}  # ✅ Ensure DOCKER_USERNAME is globally available
       DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}  # ✅ Ensure DOCKER_PASSWORD is globally available
