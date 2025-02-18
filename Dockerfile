@@ -21,5 +21,8 @@ COPY --from=build-stage /app/dist /usr/share/nginx/html
 # # Copy giphy.gif to the Nginx HTML directory
 # COPY giphy.gif /usr/share/nginx/html/
 
+# # Copy giphy.gif to the Nginx HTML directory
+COPY index.html /usr/share/nginx/html/
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
