@@ -2,20 +2,20 @@
 FROM node:lts-alpine AS build-stage
 WORKDIR /app
 
-# Copy package.json first to cache dependencies
-COPY package.json ./
+# Copy package.json first for better build caching
+COPY package.json package-lock.json ./
 RUN npm install
 
-# Now copy the rest of the app, including index.html and assets
+# Now copy the rest of the application files
 COPY . .
 
-# Build the Vue.js app
-RUN npm run build
+# Force Vue.js build
+RUN npm run build && ls -l /app/dist && cat /app/dist/index.html | head -n 10
 
 # Production stage
 FROM nginx:stable-alpine AS production-stage
 
-# Copy built app to Nginx
+# Copy built Vue.js app to Nginx directory
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 
 EXPOSE 80
