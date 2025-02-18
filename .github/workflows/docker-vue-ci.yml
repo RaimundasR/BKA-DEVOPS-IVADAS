@@ -57,8 +57,7 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }},${{ env.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:latest
-          cache-to: type=inline
+          no-cache: true  # ✅ Forces a fresh build
 
       - name: Cleanup Docker Cache
         run: docker system prune -af
