@@ -64,6 +64,13 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }},${{ env.IMAGE_NAME }}:latest
           no-cache: true  # ✅ Forces a fresh build
+      - name: Retag and Push Latest
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          docker pull "$IMAGE_NAME:${{ env.DOCKER_TAG }}"
+          docker tag "$IMAGE_NAME:${{ env.DOCKER_TAG }}" "$IMAGE_NAME:latest"
+          docker push "$IMAGE_NAME:latest"
+
 
 
       - name: Verify Pushed Image
