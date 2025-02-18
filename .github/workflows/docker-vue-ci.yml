@@ -28,11 +28,6 @@ jobs:
         with:
           ref: ${{ github.ref }}  # ✅ Ensures it checks out the PR branch
           fetch-depth: 0  # ✅ Ensures it gets the full history
-      - name: Debug Check Dockerfile Contents
-        run: cat Dockerfile
-
-      - name: Debug All Environment Variables
-        run: printenv | sort
 
       - name: Define Docker Image Name
         run: |
