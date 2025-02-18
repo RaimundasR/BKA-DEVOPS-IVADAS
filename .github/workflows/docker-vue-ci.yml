@@ -69,6 +69,7 @@ jobs:
     runs-on: bka-devops
     timeout-minutes: 5
     environment: dockerhub-registry
+    needs: build-development  # ✅ Ensures build-development runs first
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     steps:
       - name: Log in to Docker Hub
@@ -80,7 +81,7 @@ jobs:
       - name: Pull and Run Latest Development Image
         run: |
           IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
-          docker pull --no-cache "$IMAGE_NAME:latest"
+          docker pull "$IMAGE_NAME:latest"
           docker stop vue-dev || true
           docker rm -f vue-dev || true
           docker rmi -f $(docker images -q "$IMAGE_NAME") || true
@@ -102,14 +103,15 @@ jobs:
       - name: Get Latest v<num> Docker Tag
         run: |
           IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
-          DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags?page_size=10" | jq -r '[.results[] | select(.name | test("^v[0-9]+$"))] | sort_by(.last_updated) | reverse | .[0].name')
+          DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags?page_size=20" | \
+          jq -r '[.results[] | select(.name | test("^v[0-9]+$"))] | sort_by(.last_updated) | reverse | .[0].name')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
           echo "✅ Using latest Docker tag: $DOCKER_TAG"
 
       - name: Pull and Run Latest Staging Image
         run: |
           IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
-          docker pull --no-cache "$IMAGE_NAME:$DOCKER_TAG"
+          docker pull "$IMAGE_NAME:$DOCKER_TAG"
           docker stop vue-staging || true
           docker rm -f vue-staging || true
           docker rmi -f $(docker images -q "$IMAGE_NAME") || true
@@ -131,14 +133,15 @@ jobs:
       - name: Get Latest v<num> Docker Tag
         run: |
           IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
-          DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags?page_size=10" | jq -r '[.results[] | select(.name | test("^v[0-9]+$"))] | sort_by(.last_updated) | reverse | .[0].name')
+          DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags?page_size=20" | \
+          jq -r '[.results[] | select(.name | test("^v[0-9]+$"))] | sort_by(.last_updated) | reverse | .[0].name')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
           echo "✅ Using latest Docker tag: $DOCKER_TAG"
 
       - name: Pull and Run Latest Production Image
         run: |
           IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
-          docker pull --no-cache "$IMAGE_NAME:$DOCKER_TAG"
+          docker pull "$IMAGE_NAME:$DOCKER_TAG"
           docker stop vue-nginx || true
           docker rm -f vue-nginx || true
           docker rmi -f $(docker images -q "$IMAGE_NAME") || true
