@@ -3,12 +3,12 @@ FROM node:lts-alpine AS build-stage
 WORKDIR /app
 
 # Copy package.json first for better build caching
-COPY package.json package-lock.json ./
+COPY package.json  ./
 RUN npm install
 
 # Now copy the rest of the application files
 COPY . .
-COPY index.html /app/dist
+
 
 # Production stage
 FROM nginx:stable-alpine AS production-stage

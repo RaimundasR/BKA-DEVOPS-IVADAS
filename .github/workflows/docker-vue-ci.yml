@@ -22,9 +22,15 @@ jobs:
     outputs:
       DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}
     steps:
-      - name: Cleanup Docker Cache before build
-        run: docker system prune -af
-        if: always()
+
+      - name: Checkout the Latest Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}  # ✅ Ensures it checks out the PR branch
+          fetch-depth: 0  # ✅ Ensures it gets the full history
+      - name: Debug Check Dockerfile Contents
+        run: cat Dockerfile
+
       - name: Debug All Environment Variables
         run: printenv | sort
 
@@ -53,7 +59,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
+     
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
