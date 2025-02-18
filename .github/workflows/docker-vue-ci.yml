@@ -64,14 +64,11 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }},${{ env.IMAGE_NAME }}:latest
-          no-cache: true  # ✅ Forces a fresh build
-      - name: Retag and Push Latest
-        run: |
-          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
-          docker pull "$IMAGE_NAME:${{ env.DOCKER_TAG }}"
-          docker tag "$IMAGE_NAME:${{ env.DOCKER_TAG }}" "$IMAGE_NAME:latest"
-          docker push "$IMAGE_NAME:latest"
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-to: type=inline
+
 
   deploy-development:
     runs-on: bka-devops
@@ -89,11 +86,20 @@ jobs:
       - name: Pull and Run Latest Development Image
         run: |
           IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
-          docker pull "$IMAGE_NAME:latest"
+          
+          # Stop and remove the old container
           docker stop vue-dev || true
           docker rm -f vue-dev || true
+          
+          # Delete old images to prevent caching issues
           docker rmi -f $(docker images -q "$IMAGE_NAME") || true
+
+          # Pull the latest image
+          docker pull "$IMAGE_NAME:latest"
+
+          # Run the container using the latest image
           docker run -d --name vue-dev -p 8989:80 "$IMAGE_NAME:latest"
+
       
       - name: Cleanup Docker Cache
         run: docker system prune -af
