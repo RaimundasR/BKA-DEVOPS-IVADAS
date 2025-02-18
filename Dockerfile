@@ -8,9 +8,7 @@ RUN npm install
 
 # Now copy the rest of the application files
 COPY . .
-
-# Force Vue.js build
-RUN npm run build && ls -l /app/dist && cat /app/dist/index.html | head -n 10
+COPY index.html /app/dist
 
 # Production stage
 FROM nginx:stable-alpine AS production-stage
