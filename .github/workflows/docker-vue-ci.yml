@@ -57,7 +57,16 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }},${{ env.IMAGE_NAME }}:latest
-          no-cache: true  # ✅ Forces a fresh build
+          cache-from: type=local
+          cache-to: type=local
+          no-cache: true  # ✅ Ensures Docker rebuilds everything
+          
+      - name: Verify Pushed Image
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-vue-app"
+          docker manifest inspect "$IMAGE_NAME:latest" | jq .config.digest
+
+
 
    
 
@@ -82,12 +91,11 @@ jobs:
           docker stop vue-dev || true
           docker rm -f vue-dev || true
           docker rmi -f $(docker images -q "$IMAGE_NAME") || true
-          docker system prune -af
           docker run -d --name vue-dev -p 8989:80 "$IMAGE_NAME:latest"
       
-      # - name: Cleanup Docker Cache
-      #   run: docker system prune -af
-      #   if: always()
+      - name: Cleanup Docker Cache
+        run: docker system prune -af
+        if: always()
 
 
   deploy-staging:
